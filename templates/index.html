@@ -1,0 +1,1512 @@
+<!doctype html>
+<html lang="en" class="h-full">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>PlastiView XAI - Microplastic Detection & Analysis</title>
+        <!-- Tailwind CSS CDN -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            sans: ["Outfit", "Inter", "sans-serif"],
+                        },
+                        colors: {
+                            slate: {
+                                850: "#1e293b",
+                                950: "#0b0f19",
+                            },
+                        },
+                    },
+                },
+            };
+        </script>
+        <!-- Google Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <!-- FontAwesome Icons -->
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
+        />
+
+        <style>
+            /* Custom scrollbars */
+            ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+            ::-webkit-scrollbar-track {
+                background: #0b0f19;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #334155;
+                border-radius: 4px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #475569;
+            }
+
+            /* Smooth transitions */
+            .transition-all-300 {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            /* Pulsing ring animation */
+            @keyframes pulse-ring {
+                0% {
+                    transform: scale(0.95);
+                    opacity: 1;
+                }
+                50% {
+                    transform: scale(1.1);
+                    opacity: 0.5;
+                }
+                100% {
+                    transform: scale(1.3);
+                    opacity: 0;
+                }
+            }
+            .pulse-dot::before {
+                content: "";
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                background: inherit;
+                animation: pulse-ring 2s infinite;
+            }
+        </style>
+    </head>
+    <body
+        class="min-h-screen bg-slate-950 text-slate-200 font-sans flex flex-col antialiased"
+    >
+        <!-- 1. Header -->
+        <header
+            class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 text-white p-4 shadow-lg sticky top-0 z-50 transition-all duration-300"
+        >
+            <div
+                class="w-full px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4"
+            >
+                <div class="flex items-center space-x-3">
+                    <div
+                        class="bg-gradient-to-tr from-blue-600 to-teal-500 p-2.5 rounded-xl shadow-lg shadow-blue-500/20"
+                    >
+                        <i
+                            class="fa-solid fa-microscope text-xl text-white"
+                        ></i>
+                    </div>
+                    <div>
+                        <h1
+                            class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-teal-400 to-emerald-400 tracking-tight"
+                        >
+                            PlastiView XAI
+                        </h1>
+                        <p class="text-xs text-slate-400 font-medium">
+                            Microplastic Detection & Explainable AI Analysis
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    class="flex items-center space-x-4 text-xs sm:text-sm text-slate-300 bg-slate-950/40 px-3 py-1.5 rounded-lg border border-slate-800"
+                >
+                    <div class="flex items-center space-x-2">
+                        <span class="relative flex h-2 w-2">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"
+                            ></span>
+                            <span
+                                class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"
+                            ></span>
+                        </span>
+                        <span class="font-medium">API Connected</span>
+                    </div>
+                    <div class="h-4 w-px bg-slate-800"></div>
+                    <div class="flex items-center space-x-1.5">
+                        <i class="fa-solid fa-microchip text-blue-400"></i>
+                        <span
+                            id="compute-status"
+                            class="font-mono text-slate-300"
+                            >Detecting Device...</span
+                        >
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Container -->
+        <main class="w-full px-4 sm:px-6 lg:px-8 py-8 flex-grow">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
+                <!-- Column 1: Modes (Model Selection) -->
+                <div class="lg:col-span-3 flex flex-col space-y-6">
+                    <!-- Model Selector Card -->
+                    <div
+                        class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl hover:border-slate-700/50 transition-all duration-300"
+                    >
+                        <div class="flex items-center space-x-2.5 mb-4">
+                            <div
+                                class="bg-teal-500/10 p-2 rounded-lg text-teal-400"
+                            >
+                                <i class="fa-solid fa-sliders text-sm"></i>
+                            </div>
+                            <h2
+                                class="text-lg font-bold text-white tracking-wide"
+                            >
+                                Model Selection
+                            </h2>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Model 1 (Client-Adapted - Recommended) -->
+                            <div
+                                id="model-finetuned"
+                                onclick="selectModel('finetuned')"
+                                class="cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 flex flex-col justify-between border-blue-500/60 bg-blue-950/20 shadow-md shadow-blue-500/5 hover:bg-blue-900/10"
+                            >
+                                <div>
+                                    <div
+                                        class="flex justify-between items-start mb-2"
+                                    >
+                                        <h3
+                                            class="font-bold text-slate-100 text-sm flex items-center gap-1.5"
+                                        >
+                                            Fine-tuned Model
+                                            <span
+                                                class="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-normal uppercase tracking-wider"
+                                                >Fine-tuned</span
+                                            >
+                                        </h3>
+                                        <i
+                                            class="fa-solid fa-circle-check text-blue-500"
+                                            id="check-finetuned"
+                                        ></i>
+                                    </div>
+                                    <p
+                                        class="text-[11px] font-mono text-blue-400 bg-blue-950/50 inline-block px-2 py-0.5 rounded mb-2 border border-blue-900/50"
+                                    >
+                                        finetuned.pth
+                                    </p>
+                                    <p
+                                        class="text-xs text-slate-400 leading-relaxed"
+                                    >
+                                        Fine-tuned via pseudo-labeling for noisy
+                                        client environments. Higher robustness.
+                                    </p>
+                                </div>
+                                <div
+                                    class="mt-4 flex items-center text-xs text-slate-500 font-semibold border-t border-slate-800/80 pt-2.5"
+                                >
+                                    <i
+                                        class="fa-solid fa-shield-halved mr-1.5 text-blue-400"
+                                    ></i>
+                                    Validation F1:
+                                    <span class="font-mono text-slate-300 ml-1"
+                                        >0.6557</span
+                                    >
+                                </div>
+                            </div>
+
+                            <!-- Model 2 (Base Model) -->
+                            <div
+                                id="model-base"
+                                onclick="selectModel('base')"
+                                class="cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 flex flex-col justify-between border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-800/30"
+                            >
+                                <div>
+                                    <div
+                                        class="flex justify-between items-start mb-2"
+                                    >
+                                        <h3
+                                            class="font-bold text-slate-300 text-sm"
+                                        >
+                                            Base Faster R-CNN
+                                        </h3>
+                                        <i
+                                            class="fa-regular fa-circle text-slate-700"
+                                            id="check-base"
+                                        ></i>
+                                    </div>
+                                    <p
+                                        class="text-[11px] font-mono text-slate-500 bg-slate-950/50 inline-block px-2 py-0.5 rounded mb-2 border border-slate-800"
+                                    >
+                                        fasterrcnn.pth
+                                    </p>
+                                    <p
+                                        class="text-xs text-slate-400 leading-relaxed"
+                                    >
+                                        Trained on primary laboratory dataset.
+                                        High precision in clean laboratory
+                                        settings.
+                                    </p>
+                                </div>
+                                <div
+                                    class="mt-4 flex items-center text-xs text-slate-500 font-semibold border-t border-slate-800/80 pt-2.5"
+                                >
+                                    <i
+                                        class="fa-solid fa-shield-halved mr-1.5 text-slate-500"
+                                    ></i>
+                                    Validation F1:
+                                    <span class="font-mono text-slate-300 ml-1"
+                                        >0.7327</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 2: Parameters and Image Load -->
+                <div class="lg:col-span-3 flex flex-col space-y-6">
+                    <!-- Parameters Card -->
+                    <div
+                        class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl hover:border-slate-700/50 transition-all duration-300"
+                    >
+                        <div class="flex items-center space-x-2.5 mb-4">
+                            <div
+                                class="bg-blue-500/10 p-2 rounded-lg text-blue-400"
+                            >
+                                <i class="fa-solid fa-gears text-sm"></i>
+                            </div>
+                            <h2
+                                class="text-lg font-bold text-white tracking-wide"
+                            >
+                                Parameters
+                            </h2>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label
+                                    for="threshold-slider"
+                                    class="text-xs font-medium text-slate-300"
+                                >
+                                    Confidence Threshold
+                                </label>
+                                <span
+                                    id="threshold-val"
+                                    class="font-mono text-xs text-blue-400 bg-blue-950/40 px-2 py-0.5 rounded border border-blue-900/50"
+                                    >0.50</span
+                                >
+                            </div>
+                            <input
+                                id="threshold-slider"
+                                type="range"
+                                min="0.10"
+                                max="0.95"
+                                step="0.05"
+                                value="0.50"
+                                class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500 hover:accent-blue-400 transition-colors"
+                                oninput="updateThreshold(this.value)"
+                            />
+                            <div
+                                class="flex justify-between text-[10px] text-slate-500 mt-1.5 font-mono"
+                            >
+                                <span>0.10 (More Boxes)</span>
+                                <span>0.95 (Highly Confident)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload Zone Card -->
+                    <div
+                        class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl flex-grow flex flex-col hover:border-slate-700/50 transition-all duration-300"
+                    >
+                        <div class="flex items-center space-x-2.5 mb-4">
+                            <div
+                                class="bg-indigo-500/10 p-2 rounded-lg text-indigo-400"
+                            >
+                                <i
+                                    class="fa-solid fa-cloud-arrow-up text-sm"
+                                ></i>
+                            </div>
+                            <h2
+                                class="text-lg font-bold text-white tracking-wide"
+                            >
+                                Microscopy Image Payload
+                            </h2>
+                        </div>
+
+                        <!-- Dropzone -->
+                        <div
+                            id="dropzone"
+                            class="border-2 border-dashed border-slate-700 hover:border-blue-500/70 hover:bg-slate-950/20 bg-slate-950/40 rounded-xl p-8 flex-grow flex flex-col justify-center items-center text-center cursor-pointer transition-all duration-300 group"
+                            onclick="triggerFileInput()"
+                            ondragover="handleDragOver(event)"
+                            ondragleave="handleDragLeave()"
+                            ondrop="handleDrop(event)"
+                        >
+                            <input
+                                type="file"
+                                id="file-input"
+                                accept="image/*"
+                                class="hidden"
+                                onchange="handleFileSelect(event)"
+                            />
+
+                            <!-- Upload Icon & Instructions -->
+                            <div id="upload-prompt" class="space-y-4">
+                                <div
+                                    class="mx-auto w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-all duration-300 shadow-inner shadow-black/20"
+                                >
+                                    <i
+                                        class="fa-solid fa-cloud-arrow-up text-2xl"
+                                    ></i>
+                                </div>
+                                <div>
+                                    <h3
+                                        class="text-sm font-semibold text-white"
+                                    >
+                                        Drop Microscopy Image Here
+                                    </h3>
+                                    <p class="text-xs text-slate-500 mt-1">
+                                        or click to browse local files
+                                    </p>
+                                </div>
+                                <p
+                                    class="text-[10px] text-slate-600 bg-slate-950 px-2 py-1 rounded border border-slate-900/60 inline-block font-mono"
+                                >
+                                    SUPPORTS: .JPG, .PNG, .TIFF
+                                </p>
+                            </div>
+
+                            <!-- Image Preview -->
+                            <div
+                                id="upload-preview"
+                                class="hidden w-full relative group/preview"
+                            >
+                                <img
+                                    id="preview-img"
+                                    src=""
+                                    alt="Payload preview"
+                                    class="w-full max-h-[260px] object-contain rounded-lg shadow-lg border border-slate-800/60"
+                                />
+                                <div
+                                    class="absolute inset-0 bg-slate-950/70 opacity-0 group-hover/preview:opacity-100 flex items-center justify-center rounded-lg transition-all duration-300 backdrop-blur-sm"
+                                >
+                                    <button
+                                        type="button"
+                                        onclick="removeImage(event)"
+                                        class="bg-red-500 hover:bg-red-600 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-lg shadow-red-500/20 transform translate-y-2 group-hover/preview:translate-y-0 transition-all duration-300 flex items-center gap-1.5"
+                                    >
+                                        <i class="fa-solid fa-trash-can"></i>
+                                        Remove Image
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Inference Trigger Button -->
+                        <button
+                            id="btn-infer"
+                            type="button"
+                            onclick="runInference()"
+                            disabled
+                            class="w-full mt-6 py-4 rounded-xl font-bold text-base shadow-lg shadow-blue-500/5 bg-slate-800 text-slate-500 cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
+                        >
+                            <i class="fa-solid fa-circle-play text-sm"></i> Run
+                            Inference Engine
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Column 3: Analysis Output Visualizer -->
+                <div class="lg:col-span-6 flex flex-col">
+                    <div
+                        class="bg-slate-900 border border-slate-800 rounded-2xl min-h-[640px] shadow-2xl flex flex-col overflow-hidden relative"
+                    >
+                        <!-- Visualization Header / Tab Selector -->
+                        <div
+                            class="bg-slate-900/50 border-b border-slate-800 p-4 flex flex-col sm:flex-row justify-between items-center gap-4"
+                        >
+                            <h2
+                                class="font-bold flex items-center text-white text-base tracking-wide"
+                            >
+                                <div
+                                    class="bg-blue-500/10 p-2 rounded-lg text-blue-400 mr-2.5"
+                                >
+                                    <i class="fa-solid fa-chart-column"></i>
+                                </div>
+                                Analysis Output Visualizer
+                            </h2>
+
+                            <!-- View Mode Tab Buttons (visible only after results exist) -->
+                            <div
+                                id="tabs-container"
+                                class="hidden flex space-x-1.5 bg-slate-950 rounded-xl p-1 border border-slate-800/80"
+                            >
+                                <button
+                                    onclick="setViewMode('detected')"
+                                    id="tab-detected"
+                                    class="px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-400 hover:text-white"
+                                >
+                                    <i
+                                        class="fa-solid fa-square-poll-vertical mr-1"
+                                    ></i>
+                                    Detection
+                                </button>
+                                <button
+                                    onclick="setViewMode('gradcam')"
+                                    id="tab-gradcam"
+                                    class="px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-400 hover:text-white"
+                                >
+                                    <i class="fa-solid fa-circle-dot mr-1"></i>
+                                    Grad-CAM
+                                </button>
+                                <button
+                                    onclick="setViewMode('collage')"
+                                    id="tab-collage"
+                                    class="px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 bg-slate-800 text-white shadow-sm border border-slate-700/50"
+                                >
+                                    <i
+                                        class="fa-solid fa-table-columns mr-1"
+                                    ></i>
+                                    Side-by-Side
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Inner Viewer Content Area -->
+                        <div
+                            id="viewer-container"
+                            class="flex-grow p-6 flex flex-col items-center justify-center relative"
+                        >
+                            <!-- A. INITIAL STATE -->
+                            <div
+                                id="state-initial"
+                                class="text-center space-y-4 max-w-sm"
+                            >
+                                <div
+                                    class="w-20 h-20 mx-auto rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center text-slate-700 animate-pulse"
+                                >
+                                    <i
+                                        class="fa-solid fa-photo-film text-3xl"
+                                    ></i>
+                                </div>
+                                <div>
+                                    <h3
+                                        class="text-slate-400 font-semibold text-sm"
+                                    >
+                                        Awaiting Image Payload
+                                    </h3>
+                                    <p
+                                        class="text-xs text-slate-500 mt-1 leading-relaxed"
+                                    >
+                                        Upload a microscopy image in the left
+                                        panel and click run inference to extract
+                                        detections and heatmaps.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- B. PROCESSING/LOADING STATE -->
+                            <div
+                                id="state-loading"
+                                class="hidden w-full max-w-md mx-auto text-center space-y-8 p-4"
+                            >
+                                <!-- Premium Spinner Animation -->
+                                <div
+                                    class="relative w-36 h-36 mx-auto flex items-center justify-center"
+                                >
+                                    <div
+                                        class="absolute inset-0 rounded-full border-t-4 border-b-4 border-blue-500 animate-spin"
+                                        style="animation-duration: 2s"
+                                    ></div>
+                                    <div
+                                        class="absolute inset-2 rounded-full border-r-4 border-l-4 border-teal-400 animate-spin"
+                                        style="
+                                            animation-direction: reverse;
+                                            animation-duration: 1.5s;
+                                        "
+                                    ></div>
+                                    <div
+                                        class="absolute inset-4 rounded-full border-t-2 border-b-2 border-indigo-600 animate-spin"
+                                        style="animation-duration: 1s"
+                                    ></div>
+                                    <i
+                                        class="fa-solid fa-microchip text-2xl text-slate-500 animate-pulse"
+                                    ></i>
+                                </div>
+
+                                <!-- Analysis Stages Tracker -->
+                                <div
+                                    class="space-y-4 text-left bg-slate-950/50 border border-slate-800 p-5 rounded-2xl shadow-inner"
+                                >
+                                    <div
+                                        class="flex justify-between items-center mb-2 border-b border-slate-800 pb-2"
+                                    >
+                                        <h4
+                                            id="progress-stage"
+                                            class="text-sm font-bold text-white"
+                                        >
+                                            Initializing Engine...
+                                        </h4>
+                                        <span
+                                            id="progress-pct"
+                                            class="font-mono text-xs text-teal-400 font-semibold bg-teal-950/30 px-2 py-0.5 rounded border border-teal-900/50"
+                                            >10%</span
+                                        >
+                                    </div>
+                                    <div
+                                        class="h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800/80"
+                                    >
+                                        <div
+                                            id="progress-bar"
+                                            class="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-teal-400 transition-all duration-300 ease-out"
+                                            style="width: 10%"
+                                        ></div>
+                                    </div>
+
+                                    <!-- Detailed stages checklist -->
+                                    <div
+                                        class="space-y-2 mt-4 text-xs font-mono"
+                                    >
+                                        <div
+                                            id="stage-0"
+                                            class="flex items-center justify-between text-slate-400"
+                                        >
+                                            <span
+                                                ><i
+                                                    class="fa-solid fa-circle-notch animate-spin text-blue-400 mr-2"
+                                                ></i
+                                                >Initializing PyTorch
+                                                Environment...</span
+                                            >
+                                            <span
+                                                class="text-[10px] text-slate-500"
+                                                >10%</span
+                                            >
+                                        </div>
+                                        <div
+                                            id="stage-1"
+                                            class="flex items-center justify-between text-slate-600"
+                                        >
+                                            <span
+                                                ><i
+                                                    class="fa-regular fa-circle mr-2 text-slate-800"
+                                                ></i
+                                                >Loading neural network
+                                                weights...</span
+                                            >
+                                            <span
+                                                class="text-[10px] text-slate-700"
+                                                >30%</span
+                                            >
+                                        </div>
+                                        <div
+                                            id="stage-2"
+                                            class="flex items-center justify-between text-slate-600"
+                                        >
+                                            <span
+                                                ><i
+                                                    class="fa-regular fa-circle mr-2 text-slate-800"
+                                                ></i
+                                                >Extracting ResNet-50 + FPN
+                                                Features...</span
+                                            >
+                                            <span
+                                                class="text-[10px] text-slate-700"
+                                                >55%</span
+                                            >
+                                        </div>
+                                        <div
+                                            id="stage-3"
+                                            class="flex items-center justify-between text-slate-600"
+                                        >
+                                            <span
+                                                ><i
+                                                    class="fa-regular fa-circle mr-2 text-slate-800"
+                                                ></i
+                                                >Generating Bounding Box
+                                                Proposals...</span
+                                            >
+                                            <span
+                                                class="text-[10px] text-slate-700"
+                                                >75%</span
+                                            >
+                                        </div>
+                                        <div
+                                            id="stage-4"
+                                            class="flex items-center justify-between text-slate-600"
+                                        >
+                                            <span
+                                                ><i
+                                                    class="fa-regular fa-circle mr-2 text-slate-800"
+                                                ></i
+                                                >Calculating Grad-CAM Heatmaps
+                                                (Layer 4)...</span
+                                            >
+                                            <span
+                                                class="text-[10px] text-slate-700"
+                                                >90%</span
+                                            >
+                                        </div>
+                                        <div
+                                            id="stage-5"
+                                            class="flex items-center justify-between text-slate-600"
+                                        >
+                                            <span
+                                                ><i
+                                                    class="fa-regular fa-circle mr-2 text-slate-800"
+                                                ></i
+                                                >Assembling Final
+                                                Collage...</span
+                                            >
+                                            <span
+                                                class="text-[10px] text-slate-700"
+                                                >100%</span
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- C. RESULTS STATE -->
+                            <div
+                                id="state-results"
+                                class="hidden w-full h-full flex flex-col"
+                            >
+                                <!-- Visualizer Frame -->
+                                <div
+                                    class="flex-grow flex items-center justify-center bg-slate-950/70 border border-slate-800 rounded-2xl overflow-hidden relative min-h-[420px] p-4"
+                                >
+                                    <!-- View Mode 1: Collage (Side-by-Side) -->
+                                    <div
+                                        id="view-collage"
+                                        class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full h-full"
+                                    >
+                                        <!-- Left: Detections -->
+                                        <div class="flex flex-col space-y-2">
+                                            <div
+                                                class="text-xs text-slate-400 font-semibold flex items-center justify-between bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg"
+                                            >
+                                                <span
+                                                    ><i
+                                                        class="fa-solid fa-microscope text-blue-400 mr-1.5"
+                                                    ></i
+                                                    >Detection View</span
+                                                >
+                                                <span
+                                                    class="text-[10px] bg-slate-800 px-2 py-0.5 rounded font-mono"
+                                                    >Original + BBoxes</span
+                                                >
+                                            </div>
+                                            <div
+                                                class="relative flex items-center justify-center bg-black border border-slate-800 rounded-xl overflow-hidden shadow-inner flex-grow min-h-[340px]"
+                                            >
+                                                <div
+                                                    id="collage-detect-wrapper"
+                                                    class="relative inline-block max-w-full"
+                                                >
+                                                    <img
+                                                        id="collage-detect-img"
+                                                        src=""
+                                                        class="max-h-[360px] object-contain opacity-90 block mx-auto"
+                                                        alt="Collage Detections"
+                                                    />
+                                                    <!-- Dynamic bounding boxes go here -->
+                                                    <div
+                                                        id="collage-boxes-layer"
+                                                        class="absolute inset-0 pointer-events-none"
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Right: Grad-CAM Heatmap -->
+                                        <div class="flex flex-col space-y-2">
+                                            <div
+                                                class="text-xs text-slate-400 font-semibold flex items-center justify-between bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg"
+                                            >
+                                                <span
+                                                    ><i
+                                                        class="fa-solid fa-circle-notch text-orange-400 mr-1.5"
+                                                    ></i
+                                                    >Grad-CAM Layer 4
+                                                    Heatmap</span
+                                                >
+                                                <span
+                                                    class="text-[10px] bg-slate-800 px-2 py-0.5 rounded font-mono"
+                                                    >XAI Feature Map</span
+                                                >
+                                            </div>
+                                            <div
+                                                class="relative flex items-center justify-center bg-black border border-slate-800 rounded-xl overflow-hidden shadow-inner flex-grow min-h-[340px]"
+                                            >
+                                                <div
+                                                    class="relative inline-block max-w-full"
+                                                >
+                                                    <img
+                                                        id="collage-gradcam-img"
+                                                        src=""
+                                                        class="max-h-[360px] object-contain block mx-auto"
+                                                        alt="Collage Grad-CAM"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- View Mode 2: Single Detection View -->
+                                    <div
+                                        id="view-detected"
+                                        class="hidden relative items-center justify-center w-full h-full min-h-[380px]"
+                                    >
+                                        <div
+                                            id="single-detect-wrapper"
+                                            class="relative inline-block max-w-full"
+                                        >
+                                            <img
+                                                id="single-detect-img"
+                                                src=""
+                                                class="max-h-[440px] object-contain block mx-auto rounded-lg shadow-lg border border-slate-800"
+                                                alt="Full Detections"
+                                            />
+                                            <!-- Dynamic boxes for single view -->
+                                            <div
+                                                id="single-boxes-layer"
+                                                class="absolute inset-0"
+                                            ></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- View Mode 3: Single Grad-CAM View -->
+                                    <div
+                                        id="view-gradcam"
+                                        class="hidden relative items-center justify-center w-full h-full min-h-[380px]"
+                                    >
+                                        <div
+                                            class="relative inline-block max-w-full"
+                                        >
+                                            <img
+                                                id="single-gradcam-img"
+                                                src=""
+                                                class="max-h-[440px] object-contain block mx-auto rounded-lg shadow-lg border border-slate-800"
+                                                alt="Full Grad-CAM"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Metrics / Stats Dashboard -->
+                                <div
+                                    class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-slate-800 pt-6"
+                                >
+                                    <div
+                                        class="bg-slate-950/40 border border-slate-800 p-4 rounded-xl flex items-center justify-between shadow-md"
+                                    >
+                                        <div>
+                                            <p
+                                                class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1"
+                                            >
+                                                Particles Detected
+                                            </p>
+                                            <p
+                                                id="stat-count"
+                                                class="text-3xl font-extrabold text-white tracking-tight"
+                                            >
+                                                0
+                                            </p>
+                                        </div>
+                                        <div
+                                            class="bg-blue-500/10 p-3 rounded-xl text-blue-500"
+                                        >
+                                            <i
+                                                class="fa-solid fa-layer-group text-xl"
+                                            ></i>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="bg-slate-950/40 border border-slate-800 p-4 rounded-xl flex items-center justify-between shadow-md"
+                                    >
+                                        <div>
+                                            <p
+                                                class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1"
+                                            >
+                                                Max Confidence
+                                            </p>
+                                            <p
+                                                id="stat-confidence"
+                                                class="text-3xl font-extrabold text-teal-400 tracking-tight"
+                                            >
+                                                0.0%
+                                            </p>
+                                        </div>
+                                        <div
+                                            class="bg-teal-500/10 p-3 rounded-xl text-teal-500"
+                                        >
+                                            <i
+                                                class="fa-solid fa-circle-check text-xl"
+                                            ></i>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="bg-slate-950/40 border border-slate-800 p-4 rounded-xl flex items-center justify-between shadow-md"
+                                    >
+                                        <div>
+                                            <p
+                                                class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1"
+                                            >
+                                                Inference Time
+                                            </p>
+                                            <p
+                                                id="stat-time"
+                                                class="text-3xl font-extrabold text-orange-400 tracking-tight"
+                                            >
+                                                0.00s
+                                            </p>
+                                        </div>
+                                        <div
+                                            class="bg-orange-500/10 p-3 rounded-xl text-orange-500"
+                                        >
+                                            <i
+                                                class="fa-solid fa-bolt text-xl"
+                                            ></i>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Detailed Breakdown Table/List -->
+                                <div
+                                    class="mt-6 bg-slate-950/30 border border-slate-800/80 rounded-xl p-4"
+                                >
+                                    <h4
+                                        class="text-xs font-bold text-white uppercase tracking-wider mb-3 flex items-center"
+                                    >
+                                        <i
+                                            class="fa-solid fa-list-check mr-2 text-indigo-400"
+                                        ></i>
+                                        Detected Particles Inventory
+                                    </h4>
+                                    <div class="max-h-48 overflow-y-auto pr-1">
+                                        <div
+                                            id="particles-list"
+                                            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5"
+                                        >
+                                            <!-- Dynamic items list -->
+                                        </div>
+                                        <p
+                                            id="particles-empty-msg"
+                                            class="text-xs text-slate-500 text-center py-4 hidden"
+                                        >
+                                            No particles detected with current
+                                            threshold.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer
+            class="bg-slate-950 border-t border-slate-900 text-slate-600 text-center py-6 text-xs mt-12"
+        >
+            <div class="w-full px-4 sm:px-6 lg:px-8">
+                <p>
+                    PlastiView XAI Deep Learning Suite • Powered by PyTorch &
+                    Faster R-CNN Backbone
+                </p>
+            </div>
+        </footer>
+
+        <!-- Frontend logic scripting -->
+        <script>
+            // Main Application State
+            let state = {
+                selectedModel: "finetuned",
+                imageFile: null,
+                imageSrc: null,
+                isProcessing: false,
+                threshold: 0.5,
+                results: null,
+                viewMode: "collage",
+            };
+
+            // DOM elements cache
+            const dom = {
+                computeStatus: document.getElementById("compute-status"),
+                modelFinetuned: document.getElementById("model-finetuned"),
+                modelBase: document.getElementById("model-base"),
+                checkFinetuned: document.getElementById("check-finetuned"),
+                checkBase: document.getElementById("check-base"),
+                thresholdSlider: document.getElementById("threshold-slider"),
+                thresholdVal: document.getElementById("threshold-val"),
+                fileInput: document.getElementById("file-input"),
+                dropzone: document.getElementById("dropzone"),
+                uploadPrompt: document.getElementById("upload-prompt"),
+                uploadPreview: document.getElementById("upload-preview"),
+                previewImg: document.getElementById("preview-img"),
+                btnInfer: document.getElementById("btn-infer"),
+
+                // View states
+                stateInitial: document.getElementById("state-initial"),
+                stateLoading: document.getElementById("state-loading"),
+                stateResults: document.getElementById("state-results"),
+
+                // Progress tracker
+                progressBar: document.getElementById("progress-bar"),
+                progressStage: document.getElementById("progress-stage"),
+                progressPct: document.getElementById("progress-pct"),
+
+                // Image Visualizers
+                tabsContainer: document.getElementById("tabs-container"),
+                viewCollage: document.getElementById("view-collage"),
+                viewDetected: document.getElementById("view-detected"),
+                viewGradcam: document.getElementById("view-gradcam"),
+                tabDetected: document.getElementById("tab-detected"),
+                tabGradcam: document.getElementById("tab-gradcam"),
+                tabCollage: document.getElementById("tab-collage"),
+
+                collageDetectImg: document.getElementById("collage-detect-img"),
+                collageGradcamImg: document.getElementById(
+                    "collage-gradcam-img",
+                ),
+                singleDetectImg: document.getElementById("single-detect-img"),
+                singleGradcamImg: document.getElementById("single-gradcam-img"),
+
+                collageBoxesLayer: document.getElementById(
+                    "collage-boxes-layer",
+                ),
+                singleBoxesLayer: document.getElementById("single-boxes-layer"),
+
+                // Stats & breakdowns
+                statCount: document.getElementById("stat-count"),
+                statConfidence: document.getElementById("stat-confidence"),
+                statTime: document.getElementById("stat-time"),
+                particlesList: document.getElementById("particles-list"),
+                particlesEmptyMsg: document.getElementById(
+                    "particles-empty-msg",
+                ),
+            };
+
+            // Initialize connection status on load
+            window.addEventListener("DOMContentLoaded", () => {
+                fetchSystemStatus();
+            });
+
+            // Query FastAPI backend status
+            async function fetchSystemStatus() {
+                try {
+                    const response = await fetch("/api/status");
+                    if (response.ok) {
+                        const data = await response.json();
+                        let deviceLabel = "CPU Mode";
+                        if (data.device.includes("mps")) {
+                            deviceLabel = "Apple Silicon MPS Ready";
+                        } else if (data.device.includes("cuda")) {
+                            deviceLabel = "NVIDIA CUDA Ready";
+                        }
+                        dom.computeStatus.innerText = deviceLabel;
+                        dom.computeStatus.classList.add("text-blue-400");
+                    } else {
+                        dom.computeStatus.innerText = "CPU (Fall-back)";
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch API status", err);
+                    dom.computeStatus.innerText = "Inference Ready (CPU)";
+                }
+            }
+
+            // Toggle Model Selection
+            function selectModel(modelId) {
+                if (state.isProcessing) return;
+                state.selectedModel = modelId;
+
+                if (modelId === "finetuned") {
+                    dom.modelFinetuned.className =
+                        "cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 flex flex-col justify-between border-blue-500/60 bg-blue-950/20 shadow-md shadow-blue-500/5 hover:bg-blue-900/10";
+                    dom.modelBase.className =
+                        "cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 flex flex-col justify-between border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-800/30";
+
+                    dom.checkFinetuned.className =
+                        "fa-solid fa-circle-check text-blue-500";
+                    dom.checkBase.className =
+                        "fa-regular fa-circle text-slate-700";
+                } else {
+                    dom.modelFinetuned.className =
+                        "cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 flex flex-col justify-between border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-800/30";
+                    dom.modelBase.className =
+                        "cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 flex flex-col justify-between border-teal-500/60 bg-teal-950/20 shadow-md shadow-teal-500/5 hover:bg-teal-900/10";
+
+                    dom.checkFinetuned.className =
+                        "fa-regular fa-circle text-slate-700";
+                    dom.checkBase.className =
+                        "fa-solid fa-circle-check text-teal-500";
+                }
+            }
+
+            // Dynamic threshold adjustment
+            function updateThreshold(val) {
+                state.threshold = parseFloat(val);
+                dom.thresholdVal.innerText = state.threshold.toFixed(2);
+            }
+
+            // File Selection Utilities
+            function triggerFileInput() {
+                if (state.isProcessing || state.imageSrc) return;
+                dom.fileInput.click();
+            }
+
+            function handleDragOver(e) {
+                e.preventDefault();
+                if (state.isProcessing || state.imageSrc) return;
+                dom.dropzone.classList.add("border-blue-500", "bg-blue-950/10");
+            }
+
+            function handleDragLeave() {
+                dom.dropzone.classList.remove(
+                    "border-blue-500",
+                    "bg-blue-950/10",
+                );
+            }
+
+            function handleDrop(e) {
+                e.preventDefault();
+                dom.dropzone.classList.remove(
+                    "border-blue-500",
+                    "bg-blue-950/10",
+                );
+                if (state.isProcessing || state.imageSrc) return;
+
+                const file = e.dataTransfer.files[0];
+                processFile(file);
+            }
+
+            function handleFileSelect(e) {
+                const file = e.target.files[0];
+                processFile(file);
+            }
+
+            function processFile(file) {
+                if (file && file.type.startsWith("image/")) {
+                    state.imageFile = file;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        state.imageSrc = e.target.result;
+
+                        // Show preview, hide instructions
+                        dom.previewImg.src = state.imageSrc;
+                        dom.uploadPrompt.classList.add("hidden");
+                        dom.uploadPreview.classList.remove("hidden");
+
+                        // Enable inference button
+                        dom.btnInfer.disabled = false;
+                        dom.btnInfer.className =
+                            "w-full mt-6 py-4 rounded-xl font-bold text-base shadow-lg shadow-blue-500/15 bg-blue-600 hover:bg-blue-500 text-white hover:shadow-blue-500/25 transition-all duration-300 cursor-pointer flex items-center justify-center gap-2";
+
+                        // Reset viewer to initial state
+                        resetViewer();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            function removeImage(e) {
+                e.stopPropagation();
+                if (state.isProcessing) return;
+
+                state.imageFile = null;
+                state.imageSrc = null;
+                state.results = null;
+
+                dom.fileInput.value = "";
+                dom.previewImg.src = "";
+                dom.uploadPreview.classList.add("hidden");
+                dom.uploadPrompt.classList.remove("hidden");
+
+                dom.btnInfer.disabled = true;
+                dom.btnInfer.className =
+                    "w-full mt-6 py-4 rounded-xl font-bold text-base shadow-lg shadow-blue-500/5 bg-slate-800 text-slate-500 cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2";
+
+                resetViewer();
+            }
+
+            function resetViewer() {
+                dom.stateInitial.classList.remove("hidden");
+                dom.stateLoading.classList.add("hidden");
+                dom.stateResults.classList.add("hidden");
+                dom.tabsContainer.classList.add("hidden");
+            }
+
+            // View Mode Switcher
+            function setViewMode(mode) {
+                state.viewMode = mode;
+
+                // Hide all sub-views
+                dom.viewCollage.classList.add("hidden");
+                dom.viewDetected.className = "hidden";
+                dom.viewGradcam.className = "hidden";
+
+                // Reset tab styles
+                const tabs = [dom.tabDetected, dom.tabGradcam, dom.tabCollage];
+                tabs.forEach((t) => {
+                    t.className =
+                        "px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 text-slate-400 hover:text-white";
+                });
+
+                // Show selected view & highlight tab
+                if (mode === "collage") {
+                    dom.viewCollage.classList.remove("hidden");
+                    dom.tabCollage.className =
+                        "px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 bg-slate-800 text-white shadow-sm border border-slate-700/50";
+                } else if (mode === "detected") {
+                    dom.viewDetected.className =
+                        "flex items-center justify-center w-full h-full min-h-[380px]";
+                    dom.tabDetected.className =
+                        "px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-sm";
+                } else if (mode === "gradcam") {
+                    dom.viewGradcam.className =
+                        "flex items-center justify-center w-full h-full min-h-[380px]";
+                    dom.tabGradcam.className =
+                        "px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 bg-orange-600 text-white shadow-sm";
+                }
+            }
+
+            // Trigger API Inference & Progress Animation
+            async function runInference() {
+                if (!state.imageFile || state.isProcessing) return;
+
+                state.isProcessing = true;
+                state.results = null;
+
+                // Update panel button states
+                dom.btnInfer.disabled = true;
+                dom.btnInfer.innerHTML =
+                    '<i class="fa-solid fa-spinner animate-spin text-sm"></i> Running Inference...';
+                dom.btnInfer.className =
+                    "w-full mt-6 py-4 rounded-xl font-bold text-base shadow-lg bg-blue-600/30 text-slate-400 cursor-wait transition-all duration-300 flex items-center justify-center gap-2";
+
+                // Switch viewer to loading stage
+                dom.stateInitial.classList.add("hidden");
+                dom.stateResults.classList.add("hidden");
+                dom.tabsContainer.classList.add("hidden");
+                dom.stateLoading.classList.remove("hidden");
+
+                // Reset loader visualizer progress checklist
+                for (let i = 0; i < 6; i++) {
+                    const stageEl = document.getElementById(`stage-${i}`);
+                    stageEl.className =
+                        "flex items-center justify-between text-slate-600";
+                    stageEl.firstElementChild.innerHTML = `<i class="fa-regular fa-circle mr-2 text-slate-800"></i>${getStageLabel(i)}`;
+                }
+
+                // Start progress animation
+                const steps = [
+                    {
+                        text: "Initializing PyTorch Environment...",
+                        progress: 10,
+                        delay: 200,
+                        index: 0,
+                    },
+                    {
+                        text: `Loading weights: ${state.selectedModel === "base" ? "fasterrcnn.pth" : "finetuned.pth"}`,
+                        progress: 30,
+                        delay: 800,
+                        index: 1,
+                    },
+                    {
+                        text: "Extracting ResNet-50 + FPN Features...",
+                        progress: 55,
+                        delay: 1600,
+                        index: 2,
+                    },
+                    {
+                        text: "Generating Bounding Box Proposals...",
+                        progress: 75,
+                        delay: 2400,
+                        index: 3,
+                    },
+                    {
+                        text: "Calculating Grad-CAM Heatmaps (Layer 4)...",
+                        progress: 90,
+                        delay: 3000,
+                        index: 4,
+                    },
+                    {
+                        text: "Assembling Final Collage...",
+                        progress: 100,
+                        delay: 3600,
+                        index: 5,
+                    },
+                ];
+
+                let animationFinished = false;
+                let apiResponse = null;
+                let apiError = null;
+
+                // Trigger actual network request in parallel
+                const formData = new FormData();
+                formData.append("file", state.imageFile);
+                formData.append("model_id", state.selectedModel);
+                formData.append("threshold", state.threshold);
+
+                const apiPromise = fetch("/api/analyze", {
+                    method: "POST",
+                    body: formData,
+                })
+                    .then(async (res) => {
+                        if (res.ok) {
+                            apiResponse = await res.json();
+                        } else {
+                            const errDetail = await res.text();
+                            apiError = `API error (${res.status}): ${errDetail}`;
+                        }
+                    })
+                    .catch((err) => {
+                        apiError = `Connection failed: ${err.message}`;
+                    });
+
+                // Handle progress bar animation sequence
+                steps.forEach((step) => {
+                    setTimeout(() => {
+                        if (apiError) return; // Stop showing progress if API failed early
+
+                        dom.progressStage.innerText = step.text;
+                        dom.progressPct.innerText = `${step.progress}%`;
+                        dom.progressBar.style.width = `${step.progress}%`;
+
+                        // Mark current stage active, previous stages complete
+                        const activeStage = document.getElementById(
+                            `stage-${step.index}`,
+                        );
+                        activeStage.className =
+                            "flex items-center justify-between text-blue-400 font-semibold";
+                        activeStage.firstElementChild.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin mr-2 text-blue-400"></i>${step.text}`;
+
+                        for (let prevIdx = 0; prevIdx < step.index; prevIdx++) {
+                            const prevStage = document.getElementById(
+                                `stage-${prevIdx}`,
+                            );
+                            prevStage.className =
+                                "flex items-center justify-between text-emerald-500";
+                            prevStage.firstElementChild.innerHTML = `<i class="fa-solid fa-circle-check mr-2 text-emerald-500"></i>${getStageLabel(prevIdx)}`;
+                        }
+
+                        if (step.progress === 100) {
+                            animationFinished = true;
+                            checkCompletion();
+                        }
+                    }, step.delay);
+                });
+
+                // Wait for both progress bar and API response to finish
+                async function checkCompletion() {
+                    if (animationFinished) {
+                        await apiPromise; // Make sure API request has completed
+
+                        state.isProcessing = false;
+
+                        // Reset trigger button
+                        dom.btnInfer.disabled = false;
+                        dom.btnInfer.innerHTML =
+                            '<i class="fa-solid fa-circle-play text-sm"></i> Run Inference Engine';
+                        dom.btnInfer.className =
+                            "w-full mt-6 py-4 rounded-xl font-bold text-base shadow-lg shadow-blue-500/15 bg-blue-600 hover:bg-blue-500 text-white hover:shadow-blue-500/25 transition-all duration-300 cursor-pointer flex items-center justify-center gap-2";
+
+                        if (apiError) {
+                            alert(apiError);
+                            resetViewer();
+                        } else if (apiResponse) {
+                            state.results = apiResponse;
+                            displayResults();
+                        }
+                    }
+                }
+            }
+
+            // Get stage text labels for checklist completion updates
+            function getStageLabel(idx) {
+                const labels = [
+                    "Initializing PyTorch Environment...",
+                    "Loading weights...",
+                    "Extracting ResNet-50 + FPN Features...",
+                    "Generating Bounding Box Proposals...",
+                    "Calculating Grad-CAM Heatmaps (Layer 4)...",
+                    "Assembling Final Collage...",
+                ];
+                return labels[idx];
+            }
+
+            // Render API Response to the UI
+            function displayResults() {
+                dom.stateLoading.classList.add("hidden");
+                dom.stateResults.classList.remove("hidden");
+                dom.tabsContainer.classList.remove("hidden");
+
+                // Set image sources
+                const origSrc = state.imageSrc;
+                const gradcamSrc = state.results.gradcam;
+
+                dom.collageDetectImg.src = origSrc;
+                dom.collageGradcamImg.src = gradcamSrc;
+                dom.singleDetectImg.src = origSrc;
+                dom.singleGradcamImg.src = gradcamSrc;
+
+                // Reset view mode tab to collage
+                setViewMode("collage");
+
+                // Populate metric cards
+                dom.statCount.innerText = state.results.particleCount;
+                dom.statTime.innerText = `${state.results.inferenceTime}s`;
+
+                const maxConfidence =
+                    state.results.boxes.length > 0
+                        ? (
+                              parseFloat(state.results.boxes[0].confidence) *
+                              100
+                          ).toFixed(1) + "%"
+                        : "0.0%";
+                dom.statConfidence.innerText = maxConfidence;
+
+                // Render bounding boxes on detection images
+                renderBoundingBoxes();
+
+                // Populate list of detected items
+                renderParticlesList();
+            }
+
+            // Generate absolute positioned bbox divs on top of the image container
+            function renderBoundingBoxes() {
+                dom.collageBoxesLayer.innerHTML = "";
+                dom.singleBoxesLayer.innerHTML = "";
+
+                const boxes = state.results.boxes;
+
+                boxes.forEach((box) => {
+                    // Collage Bbox
+                    const collageBox = createBBoxDiv(box, false);
+                    dom.collageBoxesLayer.appendChild(collageBox);
+
+                    // Single view Bbox (supports hover tooltips)
+                    const singleBox = createBBoxDiv(box, true);
+                    dom.singleBoxesLayer.appendChild(singleBox);
+                });
+            }
+
+            // Create bounding box element with style attributes
+            function createBBoxDiv(box, isInteractive) {
+                const div = document.createElement("div");
+                div.className = `absolute border-2 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)] ${isInteractive ? "hover:bg-red-500/20 cursor-pointer pointer-events-auto transition-all" : ""}`;
+                div.id = `bbox-${isInteractive ? "single" : "collage"}-${box.id}`;
+                div.style.left = `${box.x}%`;
+                div.style.top = `${box.y}%`;
+                div.style.width = `${box.w}%`;
+                div.style.height = `${box.h}%`;
+
+                // Badge label
+                const label = document.createElement("span");
+                label.className =
+                    "absolute -top-6 left-0 bg-red-500 text-white font-mono text-[9px] px-1 py-0.5 rounded shadow whitespace-nowrap pointer-events-none";
+                label.innerText = `PLASTIC ${(parseFloat(box.confidence) * 100).toFixed(1)}%`;
+                div.appendChild(label);
+
+                if (isInteractive) {
+                    // Add event listeners to highlight corresponding item in the inventory list
+                    div.addEventListener("mouseenter", () => {
+                        highlightInventoryItem(box.id, true);
+                    });
+                    div.addEventListener("mouseleave", () => {
+                        highlightInventoryItem(box.id, false);
+                    });
+                }
+
+                return div;
+            }
+
+            // Render Inventory List of detected microplastics
+            function renderParticlesList() {
+                dom.particlesList.innerHTML = "";
+
+                const boxes = state.results.boxes;
+                if (boxes.length === 0) {
+                    dom.particlesEmptyMsg.classList.remove("hidden");
+                    return;
+                }
+                dom.particlesEmptyMsg.classList.add("hidden");
+
+                boxes.forEach((box, index) => {
+                    const confPercent = (
+                        parseFloat(box.confidence) * 100
+                    ).toFixed(1);
+
+                    const item = document.createElement("div");
+                    item.id = `inventory-item-${box.id}`;
+                    item.className =
+                        "bg-slate-900 border border-slate-800 p-3 rounded-xl flex items-center justify-between transition-all duration-200 hover:border-slate-700/80 hover:bg-slate-800/20 cursor-pointer";
+                    item.innerHTML = `
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center text-[10px] font-mono text-red-400 font-bold">
+                            #${index + 1}
+                        </div>
+                        <div>
+                            <h5 class="text-xs font-bold text-white">Microplastic Particle</h5>
+                            <p class="text-[10px] text-slate-500 font-mono">ID: ${box.id} • Size: ${box.w.toFixed(1)}x${box.h.toFixed(1)}%</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-mono text-xs font-extrabold text-red-400 bg-red-950/30 px-2 py-0.5 rounded border border-red-900/40">${confPercent}%</span>
+                    </div>
+                `;
+
+                    // Highlight corresponding bbox on hover
+                    item.addEventListener("mouseenter", () => {
+                        highlightBoundingBox(box.id, true);
+                    });
+                    item.addEventListener("mouseleave", () => {
+                        highlightBoundingBox(box.id, false);
+                    });
+
+                    dom.particlesList.appendChild(item);
+                });
+            }
+
+            // Highlighting links between boxes and lists
+            function highlightInventoryItem(id, doHighlight) {
+                const el = document.getElementById(`inventory-item-${id}`);
+                if (!el) return;
+
+                if (doHighlight) {
+                    el.classList.add("border-red-500/50", "bg-red-950/10");
+                    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                } else {
+                    el.classList.remove("border-red-500/50", "bg-red-950/10");
+                }
+            }
+
+            function highlightBoundingBox(id, doHighlight) {
+                const collageBox = document.getElementById(
+                    `bbox-collage-${id}`,
+                );
+                const singleBox = document.getElementById(`bbox-single-${id}`);
+
+                const boxes = [collageBox, singleBox];
+                boxes.forEach((box) => {
+                    if (!box) return;
+                    if (doHighlight) {
+                        box.classList.add("bg-red-500/35", "scale-[1.02]");
+                        box.classList.remove("border-red-500");
+                        box.classList.add("border-white");
+                        box.style.zIndex = "100";
+                    } else {
+                        box.classList.remove("bg-red-500/35", "scale-[1.02]");
+                        box.classList.add("border-red-500");
+                        box.classList.remove("border-white");
+                        box.style.zIndex = "auto";
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>
